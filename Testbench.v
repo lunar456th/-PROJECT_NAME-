@@ -10,9 +10,9 @@ module Testbench(); // cpu testbench
 		.reset(reset)
 	);
 
-	always @ (clk)
+	initial
 	begin
-		clk <= ~clk; #5;
+		forever #5 clk <= ~clk;
 	end
 
 	initial

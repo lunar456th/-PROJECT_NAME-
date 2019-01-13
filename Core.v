@@ -15,7 +15,14 @@
 
 module Core ( // main cpu module
 	input wire clk,
-	input wire reset
+	input wire reset,
+
+	output wire [31:0] memory_addr,
+	output wire memory_rden,
+	output wire memory_wren,
+	input wire [31:0] memory_read_val,
+	output wire [31:0] memory_write_val,
+	input wire memory_response
 	);
 
 	wire [5:0] OpCode;
@@ -39,7 +46,14 @@ module Core ( // main cpu module
 		.MemWrite(MemWrite),
 		.Branch(Branch),
 		.ALUOp(ALUOp),
-		.OpCode(OpCode)
+		.OpCode(OpCode),
+
+		.memory_addr(memory_addr),
+		.memory_rden(memory_rden),
+		.memory_wren(memory_wren),
+		.memory_read_val(memory_read_val),
+		.memory_write_val(memory_write_val),
+		.memory_response(memory_response)
 	);
 
 	Control _Control (

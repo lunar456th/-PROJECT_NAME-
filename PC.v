@@ -18,13 +18,16 @@ module PC (
 		end
 		else
 		begin
-			if (pcsel == 0)
+			if (aout < 255)
 			begin
-				aout <= aout + 1;
-			end
-			if (pcsel == 1)
-			begin
-				aout <= ain + aout + 1; // branch
+				if (pcsel == 0)
+				begin
+					aout <= aout + 1;
+				end
+				if (pcsel == 1)
+				begin
+					aout <= ain + aout + 1; // branch
+				end
 			end
 		end
 	end
