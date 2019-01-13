@@ -1,9 +1,11 @@
 `ifndef __PROCESSOR_V__
 `define __PROCESSOR_V__
 
+`include "Arbiter.v"
 `include "Core.v"
 
 module Processor # (
+	parameter NUM_CORES = 16,
 	parameter DQ_WIDTH = 16,
 	parameter ECC_TEST = "OFF",
 	parameter nBANK_MACHS = 4,
@@ -38,15 +40,65 @@ module Processor # (
 	reg [31:0] memory_read_val;
 	reg memory_response;
 
-	Core _Core (
+	reg [$clog2(NUM_CORES)-1:0] device_core_id;
+
+	wire [31:0] core_memory_addr[0:NUM_CORES-1];
+	wire core_memory_rden [NUM_CORES-1:0];
+	wire core_memory_wren [NUM_CORES-1:0];
+	wire [31:0] core_memory_write_val[0:NUM_CORES-1];
+	wire core_memory_response[0:NUM_CORES-1];
+
+	wire [NUM_CORES-1:0] core_enable;
+	wire [NUM_CORES-1:0] core_request;
+
+	assign memory_addr = core_memory_addr[device_core_id];
+	assign memory_rden = core_memory_rden[device_core_id];
+	assign memory_wren = core_memory_wren[device_core_id];
+	assign memory_write_val = core_memory_write_val[device_core_id];
+	assign memory_response = core_memory_response[device_core_id];
+
+	genvar i;
+	generate
+		for (i = 0; i < NUM_CORES; i = i + 1)
+		begin
+			Core _Core (
+				.clk(clk),
+				.reset(reset),
+				.core_enable(core_enable[i]),
+				.core_request(core_request[i]),
+				.memory_addr(core_memory_addr[i]),
+				.memory_wren(core_memory_wren[i]),
+				.memory_rden(core_memory_rden[i]),
+				.memory_write_val(core_memory_write_val[i]),
+				.memory_read_val(memory_read_val),
+				.memory_response(core_memory_response[i])
+			);
+		end
+	endgenerate
+
+	// Convert one-hot to binary = encoding?
+	integer oh_index;
+	always @ (*)
+	begin
+		device_core_id = 0;
+		for (oh_index = 0; oh_index < NUM_CORES; oh_index = oh_index + 1)
+		begin
+			if (core_enable[oh_index])
+			begin
+				 // Use 'or' to avoid synthesizing priority encoder
+				device_core_id = device_core_id | oh_index[$clog2(NUM_CORES) - 1:0];
+			end
+		end
+	end
+
+	// Dynamic Arbitration for accessing external memory using arbiter
+	Arbiter # (
+		.NUM_ENTRIES(NUM_CORES)
+	) _Arbiter(
 		.clk(clk),
 		.reset(reset),
-		.memory_addr(memory_addr),
-		.memory_wren(memory_wren),
-		.memory_rden(memory_rden),
-		.memory_write_val(memory_write_val),
-		.memory_read_val(memory_read_val),
-		.memory_response(memory_response)
+		.request(core_request),
+		.core_select(core_enable)
 	);
 
 	localparam STATE_INIT = 3'd0;
@@ -259,7 +311,7 @@ module Processor # (
 		end
 	end
 
-	always @ (*)
+	always @ (device_core_id)
 	begin
 		if (memory_rden)
 		begin

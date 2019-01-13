@@ -17,6 +17,8 @@ module Core ( // main cpu module
 	input wire clk,
 	input wire reset,
 
+	input core_enable,
+	output core_request,
 	output wire [31:0] memory_addr,
 	output wire memory_rden,
 	output wire memory_wren,
@@ -34,6 +36,8 @@ module Core ( // main cpu module
 	wire MemRead;
 	wire MemWrite;
 	wire Branch;
+
+	assign core_request = memory_rden | memory_wren;
 
 	Datapath _Datapath (
 		.clk(clk),
