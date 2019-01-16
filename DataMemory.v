@@ -20,7 +20,7 @@ module DataMemory # (
 	input wire mem_response
 	);
 
-	always @ (posedge clk)
+	always @ (addr or read_en or write_en or data_write)
 	begin
 		if (read_en)
 		begin

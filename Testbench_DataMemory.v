@@ -21,12 +21,12 @@ module Testbench ( // 더 이상 건드리면 안됨.
 	reg read_en;
 	reg write_en;
 
-    DataMemory unit0(clk, addr, data_read, data_write, read_en, write_en, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
+	DataMemory unit0(clk, addr, data_read, data_write, read_en, write_en, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
 	TemporaryMemory unit1(clk, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
 
-    initial
-    begin
-        clk <= 1'b0;
+	initial
+	begin
+		clk <= 1'b0;
 		addr <= 0; data_write <= 1; read_en <= 0; write_en <= 1; #5;
 		addr <= 1; data_write <= 2; read_en <= 0; write_en <= 1; #5;
 		addr <= 2; data_write <= 3; read_en <= 0; write_en <= 1; #5;
@@ -45,7 +45,7 @@ module Testbench ( // 더 이상 건드리면 안됨.
 		addr <= 7; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 8
 		$finish;
 	end
-	
+
 	always @ (*)
 	begin
 		$monitor("addr = %d, data_write = %d, read_en = %d, write_en = %d", addr, data_write, read_en, write_en);
@@ -80,15 +80,15 @@ module Testbench ( // 더 이상 건드리면 안됨.
 	begin
 		$monitor("mem_response = %d", mem_response);
 	end
-	
+
 	always @ (data_read)
 	begin
 		$monitor("data_read = %d", data_read);
 	end
-	
+
 	always @ (clk)
 	begin
-	    clk <= ~clk; #1;
+		clk <= ~clk; #1;
 	end
 
 endmodule
