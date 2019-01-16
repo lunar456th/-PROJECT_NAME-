@@ -3,7 +3,7 @@
 
 `timescale 1ns/1ns
 
-module Testbench ( // 더 이상 건드리면 안됨.
+module Testbench (
 	);
 
 	reg clk;
@@ -24,9 +24,17 @@ module Testbench ( // 더 이상 건드리면 안됨.
 	DataMemory unit0(clk, addr, data_read, data_write, read_en, write_en, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
 	TemporaryMemory unit1(clk, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
 
+    initial
+    begin 
+        clk = 0;
+        forever
+        begin
+            #1 clk = ~clk;
+        end
+    end
+
 	initial
 	begin
-		clk <= 1'b0;
 		addr <= 0; data_write <= 1; read_en <= 0; write_en <= 1; #5;
 		addr <= 1; data_write <= 2; read_en <= 0; write_en <= 1; #5;
 		addr <= 2; data_write <= 3; read_en <= 0; write_en <= 1; #5;
@@ -84,11 +92,6 @@ module Testbench ( // 더 이상 건드리면 안됨.
 	always @ (data_read)
 	begin
 		$monitor("data_read = %d", data_read);
-	end
-
-	always @ (clk)
-	begin
-		clk <= ~clk; #1;
 	end
 
 endmodule
