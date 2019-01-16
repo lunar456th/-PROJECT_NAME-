@@ -1,54 +1,55 @@
 `ifndef __DATAMEMORY_V__
 `define __DATAMEMORY_V__
 
-module DataMemory # ( // synchronous memory with 256 32 - bit locations for data memory
-	parameter S = 32, // size
-	parameter L = 256 // length
+module DataMemory # (
+	parameter MEM_WIDTH = 32, // size
+	parameter MEM_SIZE = 256 // length
 	)	(
-	input wire [$clog2(L)-1:0] a,
-	output reg [S-1:0] dout,
-	input wire [S-1:0] din,
-	input wire mread,
-	input wire mwrite,
+	input clk,
+	input wire [$clog2(MEM_SIZE)-1:0] addr,
+	output reg [MEM_WIDTH-1:0] data_read,
+	input wire [MEM_WIDTH-1:0] data_write,
+	input wire read_en,
+	input wire write_en,
 
-	output reg [31:0] memory_addr,
-	output reg memory_rden,
-	output reg memory_wren,
-	input wire [31:0] memory_read_val,
-	output reg [31:0] memory_write_val,
-	input wire memory_response
+	output reg [31:0] mem_addr,
+	output reg mem_read_en,
+	output reg mem_write_en,
+	input wire [31:0] mem_read_val,
+	output reg [31:0] mem_write_val,
+	input wire mem_response
 	);
 
-	always @ (a)
+	always @ (addr or read_en or write_en or data_write)
 	begin
-		if (mread)
+		if (read_en)
 		begin
-			memory_addr <= a;
-			memory_rden <= 1'b1;
+			mem_addr <= addr;
+			mem_read_en <= 1'b1;
 		end
 
-		if (mwrite)
+		if (write_en)
 		begin
-			memory_addr <= a;
-			memory_wren <= 1'b1;
-			memory_write_val <= din;
+			mem_addr <= addr;
+			mem_write_en <= 1'b1;
+			mem_write_val <= data_write;
 		end
 	end
 
-	always @ (posedge memory_response)
+	always @ (posedge mem_response)
 	begin
-		if (memory_rden)
+		if (mem_read_en)
 		begin
-			dout <= memory_read_val;
-			memory_rden <= 1'b0;
+			data_read <= mem_read_val;
+			mem_read_en <= 1'b0;
 		end
 
-		if (memory_wren)
+		if (mem_write_en)
 		begin
-			memory_wren <= 1'b0;
+			mem_write_en <= 1'b0;
 		end
 	end
 
-	endmodule
+endmodule
 
 `endif /*__DATAMEMORY_V__*/

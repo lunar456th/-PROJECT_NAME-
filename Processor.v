@@ -31,22 +31,22 @@ module Processor # (
 	output wire [0:0] ddr3_odt
 	);
 
-	wire [31:0] memory_addr;
-	wire memory_wren;
-	wire memory_rden;
-	wire [31:0] memory_write_val;
-	reg [31:0] memory_read_val;
-	reg memory_response;
+	wire [31:0] mem_addr;
+	wire mem_write_en;
+	wire mem_read_en;
+	wire [31:0] mem_write_val;
+	reg [31:0] mem_read_val;
+	reg mem_response;
 
 	Core _Core (
 		.clk(clk),
 		.reset(reset),
-		.memory_addr(memory_addr),
-		.memory_wren(memory_wren),
-		.memory_rden(memory_rden),
-		.memory_write_val(memory_write_val),
-		.memory_read_val(memory_read_val),
-		.memory_response(memory_response)
+		.mem_addr(mem_addr),
+		.mem_write_en(mem_write_en),
+		.mem_read_en(mem_read_en),
+		.mem_write_val(mem_write_val),
+		.mem_read_val(mem_read_val),
+		.mem_response(mem_response)
 	);
 
 	localparam STATE_INIT = 3'd0;
@@ -189,7 +189,7 @@ module Processor # (
 
 				STATE_READY:
 				begin
-					memory_response <= 1'b0;
+					mem_response <= 1'b0;
 					state <= STATE_READY;
 				end
 
@@ -198,7 +198,7 @@ module Processor # (
 					if (app_rdy)
 					begin
 						app_en <= 1'b1;
-						app_addr <= memory_addr;
+						app_addr <= mem_addr;
 						app_cmd <= CMD_READ;
 						state <= STATE_READ_DONE;
 					end
@@ -213,8 +213,8 @@ module Processor # (
 
 					if (app_rd_data_valid)
 					begin
-						memory_read_val <= app_rd_data;
-						memory_response <= 1'b1;
+						mem_read_val <= app_rd_data;
+						mem_response <= 1'b1;
 						state <= STATE_READY;
 					end
 				end
@@ -225,9 +225,9 @@ module Processor # (
 					begin
 						app_en <= 1'b1;
 						app_wdf_wren <= 1'b1;
-						app_addr <= memory_addr;
+						app_addr <= mem_addr;
 						app_cmd <= CMD_WRITE;
-						app_wdf_data <= memory_write_val;
+						app_wdf_data <= mem_write_val;
 						state <= STATE_WRITE_DONE;
 					end
 				end
@@ -246,7 +246,7 @@ module Processor # (
 
 					if (~app_en & ~app_wdf_wren)
 					begin
-						memory_response <= 1'b1;
+						mem_response <= 1'b1;
 						state <= STATE_READY;
 					end
 				end
@@ -261,12 +261,12 @@ module Processor # (
 
 	always @ (*)
 	begin
-		if (memory_rden)
+		if (mem_read_en)
 		begin
 			state <= STATE_READ;
 		end
 
-		if (memory_wren)
+		if (mem_write_en)
 		begin
 			state <= STATE_WRITE;
 		end

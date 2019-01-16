@@ -17,12 +17,12 @@ module Core ( // main cpu module
 	input wire clk,
 	input wire reset,
 
-	output wire [31:0] memory_addr,
-	output wire memory_rden,
-	output wire memory_wren,
-	input wire [31:0] memory_read_val,
-	output wire [31:0] memory_write_val,
-	input wire memory_response
+	output wire [31:0] mem_addr,
+	output wire mem_read_en,
+	output wire mem_write_en,
+	input wire [31:0] mem_read_val,
+	output wire [31:0] mem_write_val,
+	input wire mem_response
 	);
 
 	wire [5:0] OpCode;
@@ -48,12 +48,12 @@ module Core ( // main cpu module
 		.ALUOp(ALUOp),
 		.OpCode(OpCode),
 
-		.memory_addr(memory_addr),
-		.memory_rden(memory_rden),
-		.memory_wren(memory_wren),
-		.memory_read_val(memory_read_val),
-		.memory_write_val(memory_write_val),
-		.memory_response(memory_response)
+		.mem_addr(mem_addr),
+		.mem_read_en(mem_read_en),
+		.mem_write_en(mem_write_en),
+		.mem_read_val(mem_read_val),
+		.mem_write_val(mem_write_val),
+		.mem_response(mem_response)
 	);
 
 	Control _Control (

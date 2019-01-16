@@ -2,30 +2,30 @@
 `define __INSTRUCTIONMEMORY_V__
 
 module InstructionMemory # ( // asynchronous memory with 256 32 - bit locations for instruction memory
-	parameter S = 32,
-	parameter L = 256
+	parameter MEM_WIDTH = 32,
+	parameter MEM_SIZE = 256
 	)	(
-	input wire [$clog2(L)-1:0] a,
-	output reg [S-1:0] d,
+	input wire [$clog2(MEM_SIZE)-1:0] addr,
+	output reg [MEM_WIDTH-1:0] data_read,
 
-	output reg [31:0] memory_addr,
-	output reg memory_rden,
-	input wire [31:0] memory_read_val,
-	input wire memory_response
+	output reg [31:0] mem_addr,
+	output reg mem_read_en,
+	input wire [31:0] mem_read_val,
+	input wire mem_response
 	);
 
-	always @ (a)
+	always @ (addr)
 	begin
-		memory_addr <= a;
-		memory_rden <= 1'b1;
+		mem_addr <= addr;
+		mem_read_en <= 1'b1;
 	end
 
-	always @ (posedge memory_response)
+	always @ (posedge mem_response)
 	begin
-		if (memory_rden)
+		if (mem_read_en)
 		begin
-			d <= memory_read_val;
-			memory_rden <= 1'b0;
+			data_read <= mem_read_val;
+			mem_read_en <= 1'b0;
 		end
 	end
 
