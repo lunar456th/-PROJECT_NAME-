@@ -2,15 +2,16 @@
 `define __TEMPORARYMEMORY_V__
 
 module TemporaryMemory (
-	input wire [31:0] memory_addr,
-	input wire memory_rden,
-	input wire memory_wren,
-	output reg [31:0] memory_read_val,
-	input wire [31:0] memory_write_val,
-	output reg memory_response
+	input clk,
+	input wire [31:0] mem_addr,
+	input wire mem_read_en,
+	input wire mem_write_en,
+	output reg [31:0] mem_read_val,
+	input wire [31:0] mem_write_val,
+	output reg mem_response
 	);
 
-	reg [31:0] memory[0:1023];
+	reg [31:0] memory[0:255];
 	
 	integer i;
 
@@ -51,63 +52,60 @@ module TemporaryMemory (
         memory[253] <= 32'h010b4020;
         memory[254] <= 32'h11200001;
         memory[255] <= 32'h1129fff8;
+        
+        mem_read_val <= 32'b0;
+        mem_response <= 1'b0;
 	end
 
-	localparam STATE_READY = 3'b000;
-	localparam STATE_READ = 3'b001;
-	localparam STATE_READ_DONE = 3'b010;
-	localparam STATE_WRITE = 3'b011;
-	localparam STATE_WRITE_DONE = 3'b100;
+	localparam STATE_READY = 2'b00;
+	localparam STATE_READ = 2'b01;
+	localparam STATE_WRITE = 2'b10;
 
-	reg [2:0] state = STATE_READY;
+	reg [1:0] state = STATE_READY;
+	
+	/////////////////////////////////////////////////////////////////////////////////
 
-	always @ (*)
+	always @ (posedge clk)
 	begin
 		case (state)
 			STATE_READY:
 			begin
-				if (memory_rden)
+				if (mem_read_en)
 				begin
 					state <= STATE_READ;
 				end
-				if (memory_wren)
+				if (mem_write_en)
 				begin
 					state <= STATE_WRITE;
+				end
+				if (mem_response == 1)
+				begin
+					mem_response <= 1'b0;
 				end
 			end
 
 			STATE_READ:
 			begin
-				memory_read_val <= memory[memory_addr];
-				memory_response <= 1'b1;
-				state <= STATE_READ_DONE;
-			end
-
-			STATE_READ_DONE:
-			begin
-				memory_response <= 1'b0;
+				mem_read_val <= memory[mem_addr];
+				mem_response <= 1'b1;
 				state <= STATE_READY;
 			end
 
 			STATE_WRITE:
 			begin
-				memory[memory_addr] <= memory_write_val;
-				memory_response <= 1'b1;
-				state <= STATE_WRITE_DONE;
-			end
-
-			STATE_WRITE_DONE:
-			begin
-				memory_response <= 1'b0;
+				memory[mem_addr] <= mem_write_val;
+				mem_response <= 1'b1;
 				state <= STATE_READY;
 			end
-			
+
 			default:
 			begin
 				state <= STATE_READY;
 			end
 		endcase
 	end
+
+	/////////////////////////////////////////////////////////////////////////////////
 
 endmodule
 
