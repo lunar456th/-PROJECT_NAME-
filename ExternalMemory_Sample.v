@@ -1,5 +1,3 @@
-
-
 module ExternalMemory_Sample (
 	inout [15:0] ddr3_dq,
 	inout [1:0] ddr3_dqs_n,

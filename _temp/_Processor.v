@@ -1,49 +1,80 @@
-`include "DataMemory.v"
+`ifndef __PROCESSOR_V__
+`define __PROCESSOR_V__
 
-module Testbench_ExternalMemory (
-	inout [15:0] ddr3_dq,
-	inout [1:0] ddr3_dqs_n,
-	inout [1:0] ddr3_dqs_p,
-	output [13:0] ddr3_addr,
-	output [2:0] ddr3_ba,
-	output ddr3_ras_n,
-	output ddr3_cas_n,
-	output ddr3_we_n,
-	output ddr3_reset_n,
-	output [0:0] ddr3_ck_p,
-	output [0:0] ddr3_ck_n,
-	output [0:0] ddr3_cke,
-	output [0:0] ddr3_cs_n,
-	output [1:0] ddr3_dm,
-	output [0:0] ddr3_odt,
-	input sys_clk_i,
-	input clk_ref_i,
-	input sys_rst
+`include "Core.v"
+
+module Processor # (
+	parameter DQ_WIDTH = 16,
+	parameter ECC_TEST = "OFF",
+	parameter nBANK_MACHS = 4,
+	parameter ADDR_WIDTH = 28,
+	parameter nCK_PER_CLK = 4
+	)	(
+	input wire clk,
+	input wire reset,
+
+	// AXI Memory In/Out Ports
+	inout wire [15:0] ddr3_dq,
+	inout wire [1:0] ddr3_dqs_n,
+	inout wire [1:0] ddr3_dqs_p,
+	output wire [13:0] ddr3_addr,
+	output wire [2:0] ddr3_ba,
+	output wire ddr3_ras_n,
+	output wire ddr3_cas_n,
+	output wire ddr3_we_n,
+	output wire ddr3_reset_n,
+	output wire [0:0] ddr3_ck_p,
+	output wire [0:0] ddr3_ck_n,
+	output wire [0:0] ddr3_cke,
+	output wire [0:0] ddr3_cs_n,
+	output wire [1:0] ddr3_dm,
+	output wire [0:0] ddr3_odt
 	);
 
-	reg clk;
-	reg reset;
+	wire [31:0] mem_addr;
+	wire mem_write_en;
+	wire mem_read_en;
+	wire [31:0] mem_write_val;
+	reg [31:0] mem_read_val;
+	reg mem_response;
+
+	Core _Core (
+		.clk(clk),
+		.reset(reset),
+		.mem_addr(mem_addr),
+		.mem_write_en(mem_write_en),
+		.mem_read_en(mem_read_en),
+		.mem_write_val(mem_write_val),
+		.mem_read_val(mem_read_val),
+		.mem_response(mem_response)
+	);
+
+	localparam STATE_INIT = 3'd0;
+	localparam STATE_READY = 3'd1;
+	localparam STATE_READ = 3'd2;
+	localparam STATE_READ_DONE = 3'd3;
+	localparam STATE_WRITE = 3'd4;
+	localparam STATE_WRITE_DONE = 3'd5;
+
+	reg [127:0] data_to_write = { 32'hcafecafe, 32'hfaceface, 32'hbabebabe, 32'hbeadbead };
+	reg [127:0] data_read_from_memory = 128'd0;
+	reg [9:0] pwr_on_rst_ctr = 1023;
 
 	localparam DATA_WIDTH = 16;
 	localparam PAYLOAD_WIDTH = (ECC_TEST == "OFF") ? DATA_WIDTH : DQ_WIDTH;
 	localparam APP_DATA_WIDTH = 2 * nCK_PER_CLK * PAYLOAD_WIDTH;
 	localparam APP_MASK_WIDTH = APP_DATA_WIDTH / 8;
 
-	parameter DQ_WIDTH = 16;
-	parameter ECC_TEST = "OFF";
-	parameter nBANK_MACHS = 4;
-	parameter ADDR_WIDTH = 28;
-	parameter nCK_PER_CLK = 4;
-
 	wire init_calib_complete;
 
-	reg [ADDR_WIDTH-1:0] app_addr;
-	reg [2:0] app_cmd;
+	reg [ADDR_WIDTH-1:0] app_addr = 0;
+	reg [2:0] app_cmd = 0;
 	reg app_en;
 	reg [APP_DATA_WIDTH-1:0] app_wdf_data;
-	wire app_wdf_end;
+	wire app_wdf_end = 1;
+	wire [APP_MASK_WIDTH-1:0] app_wdf_mask = 0;
 	reg app_wdf_wren;
-	wire [APP_DATA_WIDTH-1:0] app_rd_data;
+	wire [127:0] app_rd_data;
 	wire app_rd_data_end;
 	wire app_rd_data_valid;
 	wire app_rdy;
@@ -53,12 +84,16 @@ module Testbench_ExternalMemory (
 	wire app_zq_ack;
 	wire ui_clk;
 	wire ui_clk_sync_rst;
-	wire [APP_MASK_WIDTH-1:0] app_wdf_mask;
 	wire [11:0] device_temp;
 	wire sys_clk_i;
 	wire clk_ref_i;
 	wire sys_rst = (pwr_on_rst_ctr == 0);
-	reg [9:0] pwr_on_rst_ctr = 1023;
+
+	assign ui_clk = clk; //
+	assign ui_clk_sync_rst = reset; //
+	assign sys_clk_i = clk; //
+	assign clk_ref_i = clk; //
+	assign device_temp = 0; //
 
 	always @ (posedge clk)
 	begin
@@ -68,30 +103,22 @@ module Testbench_ExternalMemory (
 		end
 	end
 
-	assign ui_clk = clk; //
-	assign ui_clk_sync_rst = reset; //
-	assign sys_clk_i = clk; //
-	assign clk_ref_i = clk; //
-	assign device_temp = 0; //
+`ifdef SKIP_CALIB // skip calibration wires
+	wire calib_tap_req;
+	reg calib_tap_load;
+	reg [6:0] calib_tap_addr;
+	reg [7:0] calib_tap_val;
+	reg calib_tap_load_done;
+`endif
 
-	wire [31:0] mem_addr;
-	wire mem_read_en;
-	wire mem_write_en;
-	reg [31:0] mem_read_val;
-	wire [31:0] mem_write_val;
-	reg mem_response;
-
-	reg [7:0] addr;
-	wire [31:0] data_read;
-	reg [31:0] data_write;
-	reg read_en;
-	reg write_en;
-
+	// External Memory Interface
 	ExternalMemory _ExternalMemory
 	(
+		// Memory interface ports
 		.ddr3_dq(ddr3_dq),
 		.ddr3_dqs_n(ddr3_dqs_n),
 		.ddr3_dqs_p(ddr3_dqs_p),
+
 		.ddr3_addr(ddr3_addr),
 		.ddr3_ba(ddr3_ba),
 		.ddr3_ras_n(ddr3_ras_n),
@@ -104,11 +131,14 @@ module Testbench_ExternalMemory (
 		.ddr3_cs_n(ddr3_cs_n),
 		.ddr3_dm(ddr3_dm),
 		.ddr3_odt(ddr3_odt),
+
+		// Application interface ports
 		.app_addr(app_addr),
 		.app_cmd(app_cmd),
 		.app_en(app_en),
 		.app_wdf_data(app_wdf_data),
 		.app_wdf_end(app_wdf_end),
+		.app_wdf_mask(app_wdf_mask),
 		.app_wdf_wren(app_wdf_wren),
 		.app_rd_data(app_rd_data),
 		.app_rd_data_end(app_rd_data_end),
@@ -125,36 +155,22 @@ module Testbench_ExternalMemory (
 		.ui_clk_sync_rst(ui_clk_sync_rst),
 		.init_calib_complete(init_calib_complete),
 		.device_temp(device_temp),
+
 		.sys_clk_i(sys_clk_i),
 		.clk_ref_i(clk_ref_i),
 		.sys_rst(sys_rst)
+
+`ifdef SKIP_CALIB
+		,
+		.calib_tap_req(calib_tap_req),
+		.calib_tap_load(calib_tap_load),
+		.calib_tap_addr(calib_tap_addr),
+		.calib_tap_val(calib_tap_val),
+		.calib_tap_load_done(calib_tap_load_done)
+`endif
 	);
 
-	DataMemory # (
-		.MEM_WIDTH(32),
-		.MEM_SIZE(256)
-	) _DataMemory (
-		.clk(clk),
-		.addr(addr),
-		.data_read(data_read),
-		.data_write(data_write),
-		.read_en(read_en),
-		.write_en(write_en),
-		.mem_addr(mem_addr),
-		.mem_read_en(mem_read_en),
-		.mem_write_en(mem_write_en),
-		.mem_read_val(mem_read_val),
-		.mem_write_val(mem_write_val),
-		.mem_response(mem_response)
-	);
-	
-	localparam STATE_INIT = 3'd0;
-	localparam STATE_READY = 3'd1;
-	localparam STATE_READ = 3'd2;
-	localparam STATE_READ_DONE = 3'd3;
-	localparam STATE_WRITE = 3'd4;
-	localparam STATE_WRITE_DONE = 3'd5;
-
+	// 메모리 요청 트래픽에 따라 메모리를 read/write하는 state machine이 필요.
 	reg [2:0] state = STATE_INIT;
 
 	localparam CMD_WRITE = 3'b000;
@@ -251,7 +267,7 @@ module Testbench_ExternalMemory (
 		end
 	end
 
-	always @ (mem_read_en or mem_write_en)
+	always @ (*)
 	begin
 		if (mem_read_en)
 		begin
@@ -264,39 +280,6 @@ module Testbench_ExternalMemory (
 		end
 	end
 
-    initial
-    begin
-        clk = 1'b0;
-        forever
-        begin
-            #1 clk = ~clk;
-        end
-    end
-
-    initial
-    begin
-		addr <= 0; data_write <= 1; read_en <= 0; write_en <= 1; #5;
-		addr <= 1; data_write <= 2; read_en <= 0; write_en <= 1; #5;
-		addr <= 2; data_write <= 3; read_en <= 0; write_en <= 1; #5;
-		addr <= 3; data_write <= 4; read_en <= 0; write_en <= 1; #5;
-		addr <= 4; data_write <= 5; read_en <= 0; write_en <= 1; #5;
-		addr <= 5; data_write <= 6; read_en <= 0; write_en <= 1; #5;
-		addr <= 6; data_write <= 7; read_en <= 0; write_en <= 1; #5;
-		addr <= 7; data_write <= 8; read_en <= 0; write_en <= 1; #5;
-		addr <= 0; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 1
-		addr <= 1; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 2
-		addr <= 2; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 3
-		addr <= 3; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 4
-		addr <= 4; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 5
-		addr <= 5; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 6
-		addr <= 6; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 7
-		addr <= 7; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 8
-        $finish;
-    end
-
-    always @ (clk)
-    begin
-        $monitor("clk = %d", clk);
-    end
-
 endmodule
+
+`endif /*__PROCESSOR_V__*/
