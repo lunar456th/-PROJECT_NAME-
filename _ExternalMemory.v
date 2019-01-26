@@ -1,4 +1,4 @@
-module ExternalMemory_Sample (
+module ExternalMemory (
 	inout [15:0] ddr3_dq,
 	inout [1:0] ddr3_dqs_n,
 	inout [1:0] ddr3_dqs_p,
