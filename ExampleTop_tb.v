@@ -1,19 +1,19 @@
 `include "DataMemory.v"
-`include "TemporaryMemory.v"
+`include "MemoryController.v"
 
-`timescale 1ns/1ns
-
-module Testbench (
+module ExampleTop_tb (
 	);
 
 	reg clk;
+
+	parameter MEM_WIDTH = 32;
+	parameter MEM_SIZE = 256;
 
 	wire [31:0] mem_addr;
 	wire mem_read_en;
 	wire mem_write_en;
 	wire [31:0] mem_read_val;
 	wire [31:0] mem_write_val;
-	wire mem_response;
 
 	reg [7:0] addr;
 	wire [31:0] data_read;
@@ -21,17 +21,43 @@ module Testbench (
 	reg read_en;
 	reg write_en;
 
-	DataMemory unit0(clk, addr, data_read, data_write, read_en, write_en, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
-	TemporaryMemory unit1(clk, mem_addr, mem_read_en, mem_write_en, mem_read_val, mem_write_val, mem_response);
+	DataMemory # (
+		.MEM_WIDTH(MEM_WIDTH),
+		.MEM_SIZE(MEM_SIZE)
+	) _DataMemory (
+		.clk(clk),
+		.addr(addr),
+		.data_read(data_read),
+		.data_write(data_write),
+		.read_en(read_en),
+		.write_en(write_en),
+		.mem_addr(mem_addr),
+		.mem_read_en(mem_read_en),
+		.mem_write_en(mem_write_en),
+		.mem_read_val(mem_read_val),
+		.mem_write_val(mem_write_val)
+	);
 
-    initial
-    begin 
-        clk = 0;
-        forever
-        begin
-            #1 clk = ~clk;
-        end
-    end
+	MemoryController # (
+		.MEM_WIDTH(MEM_WIDTH),
+		.MEM_SIZE(MEM_SIZE)
+	) _MemoryController (
+		.clk(clk),
+		.mem_addr(mem_addr),
+		.mem_read_en(mem_read_en),
+		.mem_write_en(mem_write_en),
+		.mem_read_val(mem_read_val),
+		.mem_write_val(mem_write_val)
+	);
+
+	initial
+	begin
+		clk <= 0;
+		forever
+		begin
+			#5 clk = ~clk;
+		end
+	end
 
 	initial
 	begin
@@ -52,46 +78,6 @@ module Testbench (
 		addr <= 6; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 7
 		addr <= 7; data_write <= 0; write_en <= 0; read_en <= 1; #5; // data_read = 8
 		$finish;
-	end
-
-	always @ (*)
-	begin
-		$monitor("addr = %d, data_write = %d, read_en = %d, write_en = %d", addr, data_write, read_en, write_en);
-	end
-
-	always @ (mem_addr)
-	begin
-		$monitor("mem_addr = %d", mem_addr);
-	end
-
-	always @ (mem_read_en)
-	begin
-		$monitor("mem_read_en = %d", mem_read_en);
-	end
-
-	always @ (mem_write_en)
-	begin
-		$monitor("mem_write_en = %d", mem_write_en);
-	end
-
-	always @ (mem_read_val)
-	begin
-		$monitor("mem_read_val = %d", mem_read_val);
-	end
-
-	always @ (mem_write_val)
-	begin
-		$monitor("mem_write_val = %d", mem_write_val);
-	end
-
-	always @ (mem_response)
-	begin
-		$monitor("mem_response = %d", mem_response);
-	end
-
-	always @ (data_read)
-	begin
-		$monitor("data_read = %d", data_read);
 	end
 
 endmodule

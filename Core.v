@@ -1,28 +1,22 @@
 `ifndef __CORE_V__
 `define __CORE_V__
 
-`include "ALU.v"
-`include "ALUControl.v"
-`include "Andm.v"
-`include "Control.v"
-`include "DataMemory.v"
 `include "Datapath.v"
-`include "InstructionMemory.v"
-`include "Mux.v"
-`include "PC.v"
-`include "RegisterFile.v"
-`include "SignExtend.v"
+`include "Control.v"
 
-module Core ( // main cpu module
+module Core # (
+	parameter MEM_WIDTH = 32,
+	parameter MEM_SIZE = 256,
+	parameter PC_START_ADDRESS = 212,
+	parameter PC_END_ADDRESS = 255
+	)	(
 	input wire clk,
 	input wire reset,
-
-	output wire [31:0] mem_addr,
+	output wire [$clog2(MEM_SIZE)-1:0] mem_addr,
 	output wire mem_read_en,
 	output wire mem_write_en,
-	input wire [31:0] mem_read_val,
-	output wire [31:0] mem_write_val,
-	input wire mem_response
+	input wire [MEM_WIDTH-1:0] mem_read_val,
+	output wire [MEM_WIDTH-1:0] mem_write_val
 	);
 
 	wire [5:0] OpCode;
@@ -34,8 +28,14 @@ module Core ( // main cpu module
 	wire MemRead;
 	wire MemWrite;
 	wire Branch;
+	wire stall;
 
-	Datapath _Datapath (
+	Datapath # (
+		.MEM_WIDTH(MEM_WIDTH),
+		.MEM_SIZE(MEM_SIZE),
+		.PC_START_ADDRESS(PC_START_ADDRESS),
+		.PC_END_ADDRESS(PC_END_ADDRESS)
+	) _Datapath (
 		.clk(clk),
 		.reset(reset),
 		.RegDst(RegDst),
@@ -47,13 +47,12 @@ module Core ( // main cpu module
 		.Branch(Branch),
 		.ALUOp(ALUOp),
 		.OpCode(OpCode),
-
 		.mem_addr(mem_addr),
 		.mem_read_en(mem_read_en),
 		.mem_write_en(mem_write_en),
 		.mem_read_val(mem_read_val),
 		.mem_write_val(mem_write_val),
-		.mem_response(mem_response)
+		.stall(stall)
 	);
 
 	Control _Control (
@@ -65,7 +64,8 @@ module Core ( // main cpu module
 		.MemRead(MemRead),
 		.MemWrite(MemWrite),
 		.Branch(Branch),
-		.AluOP(ALUOp)
+		.AluOP(ALUOp),
+		.stall(stall)
 	);
 
 endmodule

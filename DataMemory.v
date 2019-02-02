@@ -7,48 +7,23 @@ module DataMemory # (
 	)	(
 	input clk,
 	input wire [$clog2(MEM_SIZE)-1:0] addr,
-	output reg [MEM_WIDTH-1:0] data_read,
+	output wire [MEM_WIDTH-1:0] data_read,
 	input wire [MEM_WIDTH-1:0] data_write,
 	input wire read_en,
 	input wire write_en,
 
-	output reg [31:0] mem_addr,
-	output reg mem_read_en,
-	output reg mem_write_en,
-	input wire [31:0] mem_read_val,
-	output reg [31:0] mem_write_val,
-	input wire mem_response
+	output wire [$clog2(MEM_SIZE)-1:0] mem_addr,
+	output wire mem_read_en,
+	output wire mem_write_en,
+	input wire [MEM_WIDTH-1:0] mem_read_val,
+	output wire [MEM_WIDTH-1:0] mem_write_val
 	);
 
-	always @ (addr or read_en or write_en or data_write)
-	begin
-		if (read_en)
-		begin
-			mem_addr <= addr;
-			mem_read_en <= 1'b1;
-		end
-
-		if (write_en)
-		begin
-			mem_addr <= addr;
-			mem_write_en <= 1'b1;
-			mem_write_val <= data_write;
-		end
-	end
-
-	always @ (posedge mem_response)
-	begin
-		if (mem_read_en)
-		begin
-			data_read <= mem_read_val;
-			mem_read_en <= 1'b0;
-		end
-
-		if (mem_write_en)
-		begin
-			mem_write_en <= 1'b0;
-		end
-	end
+	assign mem_addr = addr;
+	assign mem_read_en = read_en;
+	assign mem_write_en = write_en;
+	assign mem_write_val = write_en ? data_write : 0;
+	assign data_read = read_en ? mem_read_val : 0;
 
 endmodule
 

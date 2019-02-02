@@ -10,7 +10,8 @@ module Control (
 	output reg MemRead,
 	output reg MemWrite,
 	output reg Branch,
-	output reg [1:0] AluOP
+	output reg [1:0] AluOP,
+	output wire stall
 	);
 
 	always @ (opcode)
@@ -23,6 +24,8 @@ module Control (
 			default: { RegDst, ALUSrc, MemtoReg, RegWrite, MemRead, MemWrite, Branch, AluOP } = 9'bxxx_xxx_x_xx;
 		endcase
 	end
+
+	assign stall = opcode == 6'b100011 || opcode == 6'b101011;
 
 endmodule
 

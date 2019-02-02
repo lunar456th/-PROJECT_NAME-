@@ -1,7 +1,23 @@
 `ifndef __DATAPATH_V__
 `define __DATAPATH_V__
 
-module Datapath (
+`include "ALU.v"
+`include "ALUControl.v"
+`include "Andm.v"
+`include "DataMemory.v"
+`include "InstructionMemory.v"
+`include "MemorySelector.v"
+`include "Mux.v"
+`include "PC.v"
+`include "RegisterFile.v"
+`include "SignExtend.v"
+
+module Datapath # (
+	parameter MEM_WIDTH = 32,
+	parameter MEM_SIZE = 256,
+	parameter PC_START_ADDRESS = 212,
+	parameter PC_END_ADDRESS = 255
+	)	(
 	input wire clk,
 	input wire reset,
 	input wire RegDst,
@@ -14,12 +30,13 @@ module Datapath (
 	input wire [1:0] ALUOp,
 	output wire [5:0] OpCode,
 
-	output wire [31:0] mem_addr,
+	output wire [$clog2(MEM_SIZE)-1:0] mem_addr,
 	output wire mem_read_en,
 	output wire mem_write_en,
-	input wire [31:0] mem_read_val,
-	output wire [31:0] mem_write_val,
-	input wire mem_response
+	input wire [MEM_WIDTH-1:0] mem_read_val,
+	output wire [MEM_WIDTH-1:0] mem_write_val,
+
+	input wire stall
 	);
 
 	wire [31:0] Instruction;
@@ -35,39 +52,42 @@ module Datapath (
 	wire [31:0] ReadData;
 	wire [31:0] signExtend;
 	wire PCsel;
-
 	assign OpCode = Instruction[31:26];
+	wire [$clog2(MEM_SIZE)-1:0] mem_addr_instr;
+	wire mem_read_en_instr;
+	wire [MEM_WIDTH-1:0] mem_read_val_instr;
+	wire [$clog2(MEM_SIZE)-1:0] mem_addr_data;
+	wire mem_read_en_data;
+	wire mem_write_en_data;
+	wire [MEM_WIDTH-1:0] mem_read_val_data;
+	wire [MEM_WIDTH-1:0] mem_write_val_data;
 
 	InstructionMemory # ( // Instruction memory
-		.MEM_WIDTH(32),
-		.MEM_SIZE(256)
+		.MEM_WIDTH(MEM_WIDTH),
+		.MEM_SIZE(MEM_SIZE)
 	) _InstructionMemory (
 		.addr(PC_addr[7:0]),
 		.data_read(Instruction),
-
-		.mem_addr(mem_addr),
-		.mem_read_en(mem_read_en),
-		.mem_read_val(mem_read_val),
-		.mem_response(mem_response)
+		.mem_addr(mem_addr_instr),
+		.mem_read_en(mem_read_en_instr),
+		.mem_read_val(mem_read_val_instr)
 
 	);
 
 	DataMemory # ( // Data memory
-		.MEM_WIDTH(32),
-		.MEM_SIZE(256)
+		.MEM_WIDTH(MEM_WIDTH),
+		.MEM_SIZE(MEM_SIZE)
 	) _DataMemory (
 		.addr(ALUout[7:0]),
 		.data_read(ReadData),
 		.data_write(ReadRegister2),
 		.read_en(MemRead),
 		.write_en(MemWrite),
-
-		.mem_addr(mem_addr),
-		.mem_read_en(mem_read_en),
-		.mem_write_en(mem_write_en),
-		.mem_read_val(mem_read_val),
-		.mem_write_val(mem_write_val),
-		.mem_response(mem_response)
+		.mem_addr(mem_addr_data),
+		.mem_read_en(mem_read_en_data),
+		.mem_write_en(mem_write_en_data),
+		.mem_read_val(mem_read_val_data),
+		.mem_write_val(mem_write_val_data)
 	);
 
 	RegisterFile _RegisterFile ( // Registers
@@ -78,6 +98,23 @@ module Datapath (
 		.da(ReadRegister1),
 		.db(ReadRegister2),
 		.dc(muxdata_out)
+	);
+
+	MemorySelector _MemorySelector (
+		.clk(clk),
+		.mem_addr_instr(mem_addr_instr),
+		.mem_read_en_instr(mem_read_en_instr),
+		.mem_read_val_instr(mem_read_val_instr),
+		.mem_addr_data(mem_addr_data),
+		.mem_read_en_data(mem_read_en_data),
+		.mem_write_en_data(mem_write_en_data),
+		.mem_read_val_data(mem_read_val_data),
+		.mem_write_val_data(mem_write_val_data),
+		.mem_addr(mem_addr),
+		.mem_read_en(mem_read_en),
+		.mem_write_en(mem_write_en),
+		.mem_read_val(mem_read_val),
+		.mem_write_val(mem_write_val)
 	);
 
 	ALUControl _ALUControl ( // ALUControl
@@ -94,12 +131,16 @@ module Datapath (
 		.zero(Zero)
 	);
 
-	PC _PC( // generate PC
+	PC # ( // generate PC
+		.PC_START_ADDRESS(PC_START_ADDRESS),
+		.PC_END_ADDRESS(PC_END_ADDRESS)
+	) _PC (
 		.clk(clk),
 		.reset(reset),
 		.ain(signExtend),
 		.aout(PC_addr),
-		.pcsel(PCsel)
+		.pcsel(PCsel),
+		.stall(stall)
 	);
 
 	Andm _AndPC ( // AndPC (branch & zero)
