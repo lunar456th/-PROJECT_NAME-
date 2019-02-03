@@ -71,7 +71,6 @@ module Datapath # (
 		.mem_addr(mem_addr_instr),
 		.mem_read_en(mem_read_en_instr),
 		.mem_read_val(mem_read_val_instr)
-
 	);
 
 	DataMemory # ( // Data memory

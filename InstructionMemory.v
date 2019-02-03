@@ -8,7 +8,6 @@ module InstructionMemory # (
 	input clk,
 	input wire [$clog2(MEM_SIZE)-1:0] addr,
 	output wire [MEM_WIDTH-1:0] data_read,
-	input wire read_en,
 
 	output wire [$clog2(MEM_SIZE)-1:0] mem_addr,
 	output wire mem_read_en,
@@ -16,8 +15,8 @@ module InstructionMemory # (
 	);
 
 	assign mem_addr = addr;
-	assign mem_read_en = read_en;
-	assign data_read = read_en ? mem_read_val : 0;
+	assign mem_read_en = 1'b1;
+	assign data_read = mem_read_val;
 
 endmodule
 
