@@ -62,7 +62,6 @@ module Processor # (
 		.MEM_WIDTH(MEM_WIDTH),
 		.MEM_SIZE(MEM_SIZE)
 	) _MemoryController (
-		.clk(clk1Hz),
 		.mem_addr(mem_addr),
 		.mem_read_en(mem_read_en),
 		.mem_write_en(mem_write_en),

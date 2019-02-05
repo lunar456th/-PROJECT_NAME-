@@ -8,9 +8,8 @@ module PC # (
 	input wire clk,
 	input wire reset,
 	input wire [31:0] ain,
-	// pecsel = branch & zero
 	output reg [31:0] aout = PC_START_ADDRESS,
-	input wire pcsel,
+	input wire pcsel, // pcsel = branch & zero
 	input wire stall
 	);
 

@@ -7,7 +7,6 @@ module MemoryController # (
 	parameter MEM_WIDTH = 32,
 	parameter MEM_SIZE = 256
 	)	(
-	input clk,
 	input wire [$clog2(MEM_SIZE)-1:0] mem_addr,
 	input wire mem_read_en,
 	input wire mem_write_en,
